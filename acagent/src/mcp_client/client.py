@@ -1,20 +1,25 @@
 import os
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 from strands.tools.mcp.mcp_client import MCPClient
 import requests
+import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
 
 COGNITO_TOKEN_URL = os.getenv("COGNITO_TOKEN_URL")
 COGNITO_CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
 COGNITO_CLIENT_SECRET = os.getenv("COGNITO_CLIENT_SECRET")
 COGNITO_SCOPE = os.getenv("COGNITO_SCOPE")
 
+
 def _get_access_token():
     """
     Make a POST request to the Cognito OAuth token URL using client credentials.
     """
     response = requests.post(
-        COGNITO_TOKEN_URL,
-        auth=(COGNITO_CLIENT_ID, COGNITO_CLIENT_SECRET),
+        COGNITO_TOKEN_URL, # type: ignore
+        auth=(COGNITO_CLIENT_ID, COGNITO_CLIENT_SECRET), # type: ignore
         data={
             "grant_type": "client_credentials",
             "scope": COGNITO_SCOPE,
@@ -29,7 +34,13 @@ def get_streamable_http_mcp_client() -> MCPClient:
     Returns an MCP Client for AgentCore Gateway compatible with Strands
     """
     gateway_url = os.getenv("GATEWAY_URL")
+
     if not gateway_url:
         raise RuntimeError("Missing required environment variable: GATEWAY_URL")
+    
     access_token = _get_access_token()
-    return MCPClient(lambda: streamablehttp_client(gateway_url, headers={"Authorization": f"Bearer {access_token}"}))
+
+    client = httpx.AsyncClient(headers={"Authorization": f"Bearer {access_token}"})
+
+    return MCPClient(lambda: streamable_http_client(gateway_url, http_client=client))
+

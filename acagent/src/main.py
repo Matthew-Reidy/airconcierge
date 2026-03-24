@@ -6,6 +6,10 @@ from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemory
 from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
 from .mcp_client.client import get_streamable_http_mcp_client
 from .model.load import load_model
+from dotenv import load_dotenv
+from sysprompts import *
+
+load_dotenv()
 
 MEMORY_ID = os.getenv("BEDROCK_AGENTCORE_MEMORY_ID")
 REGION = os.getenv("AWS_REGION")
@@ -18,12 +22,6 @@ if os.getenv("LOCAL_DEV") == "1":
 else:
     # Import AgentCore Gateway as Streamable HTTP MCP Client
     strands_mcp_client = get_streamable_http_mcp_client()
-
-# Define a simple function tool
-@tool
-def add_numbers(a: int, b: int) -> int:
-    """Return the sum of two numbers"""
-    return a+b
 
 # Integrate with Bedrock AgentCore
 app = BedrockAgentCoreApp()
@@ -71,10 +69,8 @@ async def invoke(payload, context):
         agent = Agent(
             model=load_model(),
             session_manager=session_manager,
-            system_prompt="""
-                You are a helpful assistant with code execution capabilities. Use tools when appropriate.
-            """,
-            tools=[code_interpreter.code_interpreter, add_numbers] + tools
+            system_prompt=ORCHESTRATOR_PROMP,
+            tools=[code_interpreter.code_interpreter, flightAgent, itinerariesAgent, accomodationAgent] + tools
         )
 
         # Execute and format response
@@ -108,8 +104,37 @@ def format_response(result) -> str:
         pass  # No code to extract
 
     # Add LLM response
-    parts.append(f"## 📊 Result:\n{str(result)}")
+    parts.append(f"{str(result)}")
     return "\n".join(parts)
+
+
+@tool()
+def flightAgent(tools, prompt):
+
+    flightAgent = Agent(
+        model=load_model(),
+        system_prompt=FLIGHT_AGENT_PROMPT,
+        tools=[] + tools
+    )
+
+@tool()
+def accomodationAgent(tools): 
+
+    accomodationAgent = Agent(
+        model=load_model(),
+        system_prompt=ACCOMODATION_AGENT_PROMPT,
+        tools=[] + tools
+    )
+
+@tool()
+def itinerariesAgent(tools, prompt):
+
+    itinerariesAgent = Agent(
+        model=load_model(),
+        system_prompt=ITINERARIES_AGENT_PROMPT,
+        tools=[] + tools
+    )
+
 
 if __name__ == "__main__":
     app.run()
