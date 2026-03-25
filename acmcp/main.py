@@ -9,35 +9,30 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ISSUER_URL = os.getenv(" ")
-RESOURCE_SERVER = os.getenv(" ")
+ISSUER_URL = os.getenv("ISSUER_URL")
+RESOURCE_SERVER = os.getenv("RESOURCE_SERVER")
+SCOPE=os.getenv("COGNITO_SCOPE")
 
-if not ISSUER_URL or not RESOURCE_SERVER:
+if not ISSUER_URL or not RESOURCE_SERVER or not SCOPE:
     raise RuntimeError("Issuer URL and/or Resource URL not defined")
 
 # Initialize FastMCP server
 mcp = FastMCP(
-    "acmcp", 
+    "acmcp",
     token_verifier=cognitoTokenVerifyer(),
     auth=AuthSettings(
         issuer_url=AnyHttpUrl(ISSUER_URL),
         resource_server_url=AnyHttpUrl(RESOURCE_SERVER),
-        required_scopes=["read"]
+        required_scopes=[SCOPE]
     )
     
-    )
+)
 
+#test tool
 @mcp.tool()
-def searchFlights(destination: str, origin: str):
-    pass
+def addNumbers(a: int, b: int):
+    return a+b
 
-@mcp.tool()
-def searchAttractions(city: str, country: str):
-    pass
-
-@mcp.tool()
-def searchHotels():
-    pass
 
 def main():
     # Initialize and run the server
