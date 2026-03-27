@@ -1,5 +1,8 @@
-from main import mcp
+from mcp.server.fastmcp import FastMCP
+from typing import Any
 
-@mcp.tool()
-def searchHotels(query: str, pagniationToken: str | None = None):
-    pass
+def registerHotels(mcp: FastMCP[Any]) -> None:
+
+    @mcp.tool()
+    def searchHotels(query: str, pagniationToken: str | None = None):
+        pass

@@ -1,6 +1,8 @@
-from main import mcp
+from mcp.server.fastmcp import FastMCP
+from typing import Any
 
+def registerAttractions(mcp: FastMCP[Any]) -> None:
 
-@mcp.tool()
-def searchAttractions(query: str, pagniationToken: str | None = None):
-    pass
+    @mcp.tool()
+    def searchAttractions(query: str, pagniationToken: str | None = None):
+        return f"Data for {query}"

@@ -1,5 +1,7 @@
-from main import mcp
+from mcp.server.fastmcp import FastMCP
+from typing import Any
 
-@mcp.tool()
-def searchFlights(destination: str, origin: str):
-    pass
+def registerFlights(mcp: FastMCP[Any]) -> None:
+    @mcp.tool()
+    def searchFlights(destination: str, origin: str):
+        pass

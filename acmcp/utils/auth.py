@@ -11,7 +11,7 @@ class cognitoTokenVerifyer(TokenVerifier):
 
     async def verify_token(self, token: str) -> AccessToken | None:
         
-        signing_key = self.get_signing_key()
+        signing_key = self._get_signing_key()
 
         decodedHeader = jwt.get_unverified_header(token)
 
@@ -35,7 +35,7 @@ class cognitoTokenVerifyer(TokenVerifier):
             expires_at=decodedPayload["exp"]   
         )
     
-    def get_signing_key(self):
+    def _get_signing_key(self):
 
         resp = requests.request("GET", url="https://cognito-idp.us-west-1.amazonaws.com/us-west-1_cREo3YWQ0/.well-known/jwks.json")
 

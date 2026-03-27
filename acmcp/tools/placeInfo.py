@@ -1,5 +1,8 @@
-from main import mcp
+from mcp.server.fastmcp import FastMCP
+from typing import Any
 
-@mcp.tool()
-def getDetailedPlaceInfo(placeid: str | int):
-    pass
+def registerPlaceInfo(mcp : FastMCP[Any]) -> None:
+    @mcp.tool()
+    def getDetailedPlaceInfo(placeid: str | int ) -> str:
+        return f"Data for {placeid}"
+    

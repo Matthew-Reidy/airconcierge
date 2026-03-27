@@ -4,8 +4,10 @@ import os
 from pydantic import AnyHttpUrl
 from mcp.server.fastmcp import FastMCP
 from mcp.server.auth.settings import AuthSettings
-from auth import cognitoTokenVerifyer
+from utils.auth import cognitoTokenVerifyer
 from dotenv import load_dotenv
+from tools.toolRegistrar import registerTools
+from prompts.promptRegistrar import registerPrompts
 
 load_dotenv()
 
@@ -27,6 +29,9 @@ mcp = FastMCP(
     )
     
 )
+
+registerTools(mcp)
+registerPrompts(mcp)
 
 #test tool
 @mcp.tool()

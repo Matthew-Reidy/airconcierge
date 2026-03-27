@@ -77,16 +77,19 @@ async def invoke(payload, context):
         stream = agent.stream_async(payload.get("prompt"))
 
         async for event in stream:
+            
             # Handle Text parts of the response
             if "data" in event and isinstance(event["data"], str):
+                log.info(event)
                 yield event["data"]
 
             # Implement additional handling for other events
-            # if "toolUse" in event:
-            #   # Process toolUse
+            if "toolUse" in event:
+                log.info(event)
 
             # Handle end of stream
-            # if "result" in event:
+            if "result" in event:
+                log.info(event)
             #    yield(format_response(event["result"]))
 
 def format_response(result) -> str:
@@ -117,14 +120,28 @@ def flightAgent(tools, prompt):
         tools=[] + tools
     )
 
+    response = flightAgent(prompt=prompt)
+
+    log.info(response)
+
+    return str(response)
+
+
+
 @tool()
-def accomodationAgent(tools): 
+def accomodationAgent(tools, prompt): 
 
     accomodationAgent = Agent(
         model=load_model(),
         system_prompt=ACCOMODATION_AGENT_PROMPT,
         tools=[] + tools
     )
+    response = accomodationAgent(prompt=prompt)
+
+    log.info(response)
+
+    return str(response)
+
 
 @tool()
 def itinerariesAgent(tools, prompt):
@@ -134,6 +151,14 @@ def itinerariesAgent(tools, prompt):
         system_prompt=ITINERARIES_AGENT_PROMPT,
         tools=[] + tools
     )
+    
+    response = itinerariesAgent(prompt=prompt)
+
+    log.info(response)
+
+    return str(response)
+
+
 
 
 if __name__ == "__main__":
