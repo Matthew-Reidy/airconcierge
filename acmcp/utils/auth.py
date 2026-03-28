@@ -19,12 +19,15 @@ class cognitoTokenVerifyer(TokenVerifier):
 
         currEpochTime = time.time()
      
+        #if signing keys do not match deny connection
         if signing_key["keys"][1]["kid"] != decodedHeader["kid"]:
             return None
-
+        
+        #if token doesnt contain sub or doesn't match excpected value
         if not decodedPayload["sub"] or decodedPayload["sub"] != os.getenv("CLIENT_ID"):
             return None
         
+        #token iat exceeds current server time, current server time is greater than token exp
         if decodedPayload["iat"] > currEpochTime or currEpochTime > decodedPayload["exp"]:
             return None
 

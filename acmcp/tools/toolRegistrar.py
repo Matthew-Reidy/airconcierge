@@ -4,14 +4,14 @@ from mcp.server.fastmcp import FastMCP
 #tool registry funcs in order
 
 from .placeInfo import registerPlaceInfo
-from .searchAttractions import registerAttractions
+from .searchNearby import registerNearby
 from .searchFlights import registerFlights
-from .searchHotels import registerHotels
+from .searchPlaces import registerPlaces
 
 
 def registerTools(mcp: FastMCP[Any]):
 
     registerPlaceInfo(mcp)
-    registerAttractions(mcp)
+    registerNearby(mcp)
     registerFlights(mcp)
-    registerHotels(mcp)
+    registerPlaces(mcp)

@@ -21,6 +21,7 @@ if not ISSUER_URL or not RESOURCE_SERVER or not SCOPE:
 # Initialize FastMCP server
 mcp = FastMCP(
     "acmcp",
+    log_level="INFO",
     token_verifier=cognitoTokenVerifyer(),
     auth=AuthSettings(
         issuer_url=AnyHttpUrl(ISSUER_URL),
@@ -29,6 +30,7 @@ mcp = FastMCP(
     )
     
 )
+
 
 registerTools(mcp)
 registerPrompts(mcp)
