@@ -12,7 +12,6 @@ COGNITO_CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
 COGNITO_CLIENT_SECRET = os.getenv("COGNITO_CLIENT_SECRET")
 COGNITO_SCOPE = os.getenv("COGNITO_SCOPE")
 
-
 def _get_access_token():
     """
     Make a POST request to the Cognito OAuth token URL using client credentials.
@@ -22,10 +21,11 @@ def _get_access_token():
         auth=(COGNITO_CLIENT_ID, COGNITO_CLIENT_SECRET), # type: ignore
         data={
             "grant_type": "client_credentials",
-            "scope": COGNITO_SCOPE,
+            "scope": "default-m2m-resource-server-pwiqzk/read",
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
+    
     return response.json()["access_token"]
 
 

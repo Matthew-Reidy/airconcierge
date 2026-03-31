@@ -8,24 +8,25 @@ from .mcp_client.client import get_streamable_http_mcp_client
 from .model.load import load_model
 from dotenv import load_dotenv
 from sysprompts import *
+from typing import List, Any
 
 load_dotenv()
 
 MEMORY_ID = os.getenv("BEDROCK_AGENTCORE_MEMORY_ID")
 REGION = os.getenv("AWS_REGION")
+# Integrate with Bedrock AgentCore
+app = BedrockAgentCoreApp()
+log = app.logger
 
-if os.getenv("LOCAL_DEV") == "1":
+if os.getenv("LOCAL_DEV_FLAG") == "1":
     # In local dev, instantiate dummy MCP client so the code runs without deploying
     from contextlib import nullcontext
     from types import SimpleNamespace
     strands_mcp_client = nullcontext(SimpleNamespace(list_tools_sync=lambda: []))
 else:
     # Import AgentCore Gateway as Streamable HTTP MCP Client
+    print("connecting to the mcp")
     strands_mcp_client = get_streamable_http_mcp_client()
-
-# Integrate with Bedrock AgentCore
-app = BedrockAgentCoreApp()
-log = app.logger
 
 @app.entrypoint
 async def invoke(payload, context):
@@ -49,6 +50,7 @@ async def invoke(payload, context):
             ),
             REGION
         )
+
     else:
         log.warning("MEMORY_ID is not set. Skipping memory session manager initialization.")
 
@@ -64,7 +66,6 @@ async def invoke(payload, context):
     with strands_mcp_client as client:
         # Get MCP Tools
         tools = client.list_tools_sync()
-
         # Create agent
         agent = Agent(
             model=load_model(),
@@ -80,17 +81,17 @@ async def invoke(payload, context):
             
             # Handle Text parts of the response
             if "data" in event and isinstance(event["data"], str):
-                log.info(event)
+                #log.info(event)
                 yield event["data"]
 
             # Implement additional handling for other events
-            if "toolUse" in event:
-                log.info(event)
+            #if "toolUse" in event:
+                #log.info(event)
 
             # Handle end of stream
             if "result" in event:
-                log.info(event)
-            #    yield(format_response(event["result"]))
+                #log.info(event)
+                yield(format_response(event["result"]))
 
 def format_response(result) -> str:
     """Extract code from metrics and format with LLM response."""
@@ -111,13 +112,13 @@ def format_response(result) -> str:
     return "\n".join(parts)
 
 
-@tool()
-def flightAgent(tools, prompt):
+@tool(context="codeInterp")
+def flightAgent(codeInterp: AgentCoreCodeInterpreter, tools: List[Any], prompt: str):
 
     flightAgent = Agent(
         model=load_model(),
         system_prompt=FLIGHT_AGENT_PROMPT,
-        tools=[] + tools
+        tools=[codeInterp.code_interpreter] + tools
     )
 
     response = flightAgent(prompt=prompt)
@@ -127,14 +128,13 @@ def flightAgent(tools, prompt):
     return str(response)
 
 
-
-@tool()
-def accomodationAgent(tools, prompt): 
+@tool(context="codeInterp")
+def accomodationAgent(codeInterp: AgentCoreCodeInterpreter, tools: List[Any], prompt: str): 
 
     accomodationAgent = Agent(
         model=load_model(),
         system_prompt=ACCOMODATION_AGENT_PROMPT,
-        tools=[] + tools
+        tools=[codeInterp.code_interpreter] + tools
     )
     response = accomodationAgent(prompt=prompt)
 
@@ -143,13 +143,12 @@ def accomodationAgent(tools, prompt):
     return str(response)
 
 
-@tool()
-def itinerariesAgent(tools, prompt):
-
+@tool(context="codeInterp")
+def itinerariesAgent(codeInterp: AgentCoreCodeInterpreter, tools: List[Any], prompt: str):
     itinerariesAgent = Agent(
         model=load_model(),
         system_prompt=ITINERARIES_AGENT_PROMPT,
-        tools=[] + tools
+        tools=[codeInterp.code_interpreter] + tools
     )
     
     response = itinerariesAgent(prompt=prompt)

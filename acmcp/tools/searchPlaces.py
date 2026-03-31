@@ -5,6 +5,6 @@ from utils import place
 def registerPlaces(mcp: FastMCP[Any]) -> None:
 
     @mcp.tool()
-    def searchPlaces(query: str, fineGrained: bool, lat: float | None = None, lng: float | None = None):
+    async def searchPlaces(query: str, fineGrained: bool, lat: float | None = None, lng: float | None = None):
 
-        return place.discoverPlaces(query, fineGrained, lat, lng)
+        return await place.discoverPlaces(query, fineGrained, lat, lng)

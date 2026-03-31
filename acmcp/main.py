@@ -27,10 +27,12 @@ mcp = FastMCP(
         issuer_url=AnyHttpUrl(ISSUER_URL),
         resource_server_url=AnyHttpUrl(RESOURCE_SERVER),
         required_scopes=[SCOPE]
-    )
+    ),
+    stateless_http=True
     
 )
 
+#todo: context resources for places fieldMask, included_types, and pricelevels
 
 registerTools(mcp)
 registerPrompts(mcp)

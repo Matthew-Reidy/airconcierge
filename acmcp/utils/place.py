@@ -11,24 +11,36 @@ if not os.getenv("G_PLACES_KEY"):
 
 API_KEY = os.getenv("G_PLACES_KEY")
 
-CLIENT = places_v1.PlacesAsyncClient(
-    client_options=ClientOptions(api_key=API_KEY)
-)
-
 #100 miles in meters
 DEFAULT_RADIUS = 160934
 
+_ASYNC_CLIENT = None
+
+def get_client():
+    global _ASYNC_CLIENT
+
+    if _ASYNC_CLIENT is None:
+        # This creates the client on the loop that is currently 
+        # running the searchPlaces tool.
+        _ASYNC_CLIENT = places_v1.PlacesAsyncClient(
+                        client_options=ClientOptions(api_key=API_KEY)
+                    )
+        
+    return _ASYNC_CLIENT
 
 async def discoverPlaces(searchQuery: str, fineGrained: bool, lat: float | None, lng: float | None):
-    
+
+    client = get_client()
+
     request = None
 
-    minRating = 3.5
+    minRating = 1.0
 
     pricelevels = [
-                    places_v1.PriceLevel.PRICE_LEVEL_FREE,
                     places_v1.PriceLevel.PRICE_LEVEL_INEXPENSIVE,
                     places_v1.PriceLevel.PRICE_LEVEL_MODERATE,
+                    places_v1.PriceLevel.PRICE_LEVEL_EXPENSIVE,
+                    places_v1.PriceLevel.PRICE_LEVEL_VERY_EXPENSIVE
                   ]
 
     if fineGrained:
@@ -42,25 +54,26 @@ async def discoverPlaces(searchQuery: str, fineGrained: bool, lat: float | None,
 
         request = places_v1.SearchTextRequest(text_query=searchQuery, 
                                               location_bias=circle,
-                                              price_levels=pricelevels,
-                                              min_rating=minRating
+                                            #   price_levels=pricelevels,
+                                            #   min_rating=minRating
                                               )
 
     else:
         request = places_v1.SearchTextRequest(text_query=searchQuery,
-                                              price_levels=pricelevels,
-                                              min_rating=minRating
+                                            #   price_levels=pricelevels,
+                                            #   min_rating=minRating
                                               )
 
     fieldMask = "places.formattedAddress,places.displayName"    
 
-    response = await CLIENT.search_text(request=request, metadata=[("x-goog-fieldmask",fieldMask)])
+    response = await client.search_text(request=request, metadata=[("x-goog-fieldmask",fieldMask)])
 
     return response
 
 
 async def discoverPlacesNearby(lat: float, lng: float, includedTypes: list[str] | None):
     
+    client = get_client()
     # Create the LatLng object for the center
     center_point = latlng_pb2.LatLng(latitude=lat, longitude=lng)
     # Create the Circle object
@@ -76,12 +89,14 @@ async def discoverPlacesNearby(lat: float, lng: float, includedTypes: list[str] 
 
     fieldMask = "places.formattedAddress,places.displayName"
 
-    response = await CLIENT.search_nearby(request=request, metadata=[("x-goog-fieldmask",fieldMask)])
+    response = await client.search_nearby(request=request, metadata=[("x-goog-fieldmask",fieldMask)])
 
     return response
 
     
 async def placeDetails(placeID: str):
+
+    client = get_client()
 
     request = places_v1.GetPlaceRequest(
         name=f"places/{placeID}"
@@ -89,7 +104,7 @@ async def placeDetails(placeID: str):
 
     fieldMask = "places.formattedAddress,places.displayName"
 
-    response = await CLIENT.get_place(request=request, metadata=[("x-goog-fieldmask",fieldMask)])
+    response = await client.get_place(request=request, metadata=[("x-goog-fieldmask",fieldMask)])
 
     return response
 
