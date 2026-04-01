@@ -30,6 +30,8 @@ else:
 
 @app.entrypoint
 async def invoke(payload, context):
+    print(f"{payload} \n {context}")
+    
     session_id = getattr(context, 'session_id', 'default')
     user_id = payload.get("user_id") or 'default-user'
 
@@ -80,9 +82,9 @@ async def invoke(payload, context):
         async for event in stream:
             
             # Handle Text parts of the response
-            if "data" in event and isinstance(event["data"], str):
-                #log.info(event)
-                yield event["data"]
+            # if "data" in event and isinstance(event["data"], str):
+            #     #log.info(event)
+            #     yield event["data"]
 
             # Implement additional handling for other events
             #if "toolUse" in event:

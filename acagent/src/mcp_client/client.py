@@ -25,7 +25,7 @@ def _get_access_token():
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
-    
+
     return response.json()["access_token"]
 
 
@@ -43,4 +43,3 @@ def get_streamable_http_mcp_client() -> MCPClient:
     client = httpx.AsyncClient(headers={"Authorization": f"Bearer {access_token}"})
 
     return MCPClient(lambda: streamable_http_client(gateway_url, http_client=client))
-

@@ -8,7 +8,7 @@ from utils.auth import cognitoTokenVerifyer
 from dotenv import load_dotenv
 from tools.toolRegistrar import registerTools
 from prompts.promptRegistrar import registerPrompts
-
+from resources.resourceRegistrar import registerResources
 load_dotenv()
 
 ISSUER_URL = os.getenv("ISSUER_URL")
@@ -36,6 +36,7 @@ mcp = FastMCP(
 
 registerTools(mcp)
 registerPrompts(mcp)
+registerResources(mcp)
 
 #test tool
 @mcp.tool()
