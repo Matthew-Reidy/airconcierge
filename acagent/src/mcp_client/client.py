@@ -16,17 +16,22 @@ def _get_access_token():
     """
     Make a POST request to the Cognito OAuth token URL using client credentials.
     """
-    response = requests.post(
-        COGNITO_TOKEN_URL, # type: ignore
-        auth=(COGNITO_CLIENT_ID, COGNITO_CLIENT_SECRET), # type: ignore
-        data={
-            "grant_type": "client_credentials",
-            "scope": "default-m2m-resource-server-pwiqzk/read",
-        },
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
+    try:
 
-    return response.json()["access_token"]
+        response = requests.post(
+            COGNITO_TOKEN_URL, # type: ignore
+            auth=(COGNITO_CLIENT_ID, COGNITO_CLIENT_SECRET), # type: ignore
+            data={
+                "grant_type": "client_credentials",
+                "scope": COGNITO_SCOPE,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        return response.json()["access_token"]
+    
+    except KeyError as e:
+        raise e
 
 
 def get_streamable_http_mcp_client() -> MCPClient:

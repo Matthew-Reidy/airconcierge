@@ -6,6 +6,9 @@ import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { BaseStackProps } from '../types';
 import * as path from 'path';
+import * as dotenv from 'dotenv';
+
+dotenv.config({path: "acagent/.env"});
 
 export interface AgentCoreStackProps extends BaseStackProps {
     imageUri: string
@@ -107,6 +110,17 @@ export class AgentCoreStack extends cdk.Stack {
             resources: [
                 `arn:aws:bedrock-agentcore:${region}:${accountId}:policy-engine/*`,
                 this.agentCoreGateway.attrGatewayArn,
+            ],
+        }));
+
+        agentCoreGatewayRole.addToPolicy(new iam.PolicyStatement({
+            sid: 'AgentCoreLambdaPolicy',
+            effect: iam.Effect.ALLOW,
+            actions: [
+                'lambda:InvokeFunction'
+            ],
+            resources: [
+                this.mcpLambda.functionArn
             ],
         }));
 

@@ -8,7 +8,7 @@ import {
 
 const app = new cdk.App();
 const deploymentProps: BaseStackProps = {
-  appName: "acagent",
+  appName: "travelagent",
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
@@ -23,8 +23,8 @@ const deploymentProps: BaseStackProps = {
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 }
-const dockerImageStack = new DockerImageStack(app, `acagent-DockerImageStack`, deploymentProps);
-const agentCoreStack = new AgentCoreStack(app, `acagent-AgentCoreStack`, {
+const dockerImageStack = new DockerImageStack(app, `${deploymentProps.appName}-DockerImageStack`, deploymentProps);
+const agentCoreStack = new AgentCoreStack(app, `${deploymentProps.appName}-AgentCoreStack`, {
   ...deploymentProps,
   imageUri: dockerImageStack.imageUri
 });

@@ -7,7 +7,7 @@ from bedrock_agentcore.memory.integrations.strands.session_manager import AgentC
 from .mcp_client.client import get_streamable_http_mcp_client
 from .model.load import load_model
 from dotenv import load_dotenv
-from sysprompts import *
+from .sysprompts import *
 from typing import List, Any
 
 load_dotenv()
