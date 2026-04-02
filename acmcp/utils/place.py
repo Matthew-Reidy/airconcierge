@@ -40,7 +40,8 @@ async def discoverPlaces(searchQuery: str, fineGrained: bool, lat: float | None,
                     places_v1.PriceLevel.PRICE_LEVEL_INEXPENSIVE,
                     places_v1.PriceLevel.PRICE_LEVEL_MODERATE,
                     places_v1.PriceLevel.PRICE_LEVEL_EXPENSIVE,
-                    places_v1.PriceLevel.PRICE_LEVEL_VERY_EXPENSIVE
+                    places_v1.PriceLevel.PRICE_LEVEL_VERY_EXPENSIVE,
+                    places_v1.PriceLevel.PRICE_LEVEL_UNSPECIFIED
                   ]
 
     if fineGrained:
