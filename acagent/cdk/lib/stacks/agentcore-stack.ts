@@ -27,6 +27,12 @@ export class AgentCoreStack extends cdk.Stack {
         * AgentCore Gateway
         ******************************/
 
+        this.mcpLambda = new lambda.Function(this, `${props.appName}-McpLambda`, {
+            runtime: lambda.Runtime.PYTHON_3_12,
+            handler: "handler.lambda_handler",
+            code: lambda.AssetCode.fromAsset(path.join(__dirname, '../../../mcp/lambda'))
+        });
+
 
         const agentCoreGatewayRole = new iam.Role(this, `${props.appName}-AgentCoreGatewayRole`, {
             assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com'),
@@ -40,7 +46,7 @@ export class AgentCoreStack extends cdk.Stack {
 
         // create resource server to work with client credentials auth flow
         const cognitoResourceServerScope = {
-            scopeName: 'basic',
+            scopeName: 'basic', 
             scopeDescription: 'Basic access to acagent',
         };
 
@@ -115,7 +121,7 @@ export class AgentCoreStack extends cdk.Stack {
             targetConfiguration: {
                 mcp: {
                     lambda: {
-                        lambdaArn: "arn:aws:lambda:us-west-1:421989725079:function:test-using-mystack-test3FD64DD3A-FDbmK7bSCnky",
+                        lambdaArn: this.mcpLambda.functionArn,
                         toolSchema: {
                             inlinePayload: [
                                 {
