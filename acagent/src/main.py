@@ -30,6 +30,8 @@ else:
 
 @app.entrypoint
 async def invoke(payload, context):
+    
+    print("context and payload")
     print(f"{payload} \n {context}")
     
     session_id = getattr(context, 'session_id', 'default')
@@ -87,8 +89,8 @@ async def invoke(payload, context):
             #     yield event["data"]
 
             # Implement additional handling for other events
-            #if "toolUse" in event:
-                #log.info(event)
+            if "toolUse" in event:
+                log.info(event["toolUse"])
 
             # Handle end of stream
             if "result" in event:

@@ -8,5 +8,7 @@ dependencies = [
     "google-maps-places>=0.7.0",
     "httpx>=0.28.1",
     "mcp[cli]>=1.26.0",
+    "pydantic>=2.12.5",
     "pyjwt>=2.12.1",
+    "python-dotenv>=1.2.2",
 ]
