@@ -21,6 +21,7 @@ if not ISSUER_URL or not RESOURCE_SERVER or not SCOPE:
 # Initialize FastMCP server
 mcp = FastMCP(
     "acmcp",
+    host="0.0.0.0",
     log_level="INFO",
     token_verifier=cognitoTokenVerifyer(),
     auth=AuthSettings(
@@ -42,7 +43,6 @@ registerResources(mcp)
 @mcp.tool()
 def addNumbers(a: int, b: int):
     return a+b
-
 
 def main():
     # Initialize and run the server
