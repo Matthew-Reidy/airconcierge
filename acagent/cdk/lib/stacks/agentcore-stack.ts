@@ -3,14 +3,15 @@ import { Construct } from 'constructs/lib/construct';
 import * as bedrockagentcore from 'aws-cdk-lib/aws-bedrockagentcore';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda'
+import * as dynamoDB from 'aws-cdk-lib/aws-dynamodb'
 import * as cognito from 'aws-cdk-lib/aws-cognito';
-import { BaseStackProps } from '../types';
+import { CoreDeployProps } from '../types';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
 dotenv.config({path: "acagent/.env"});
 
-export interface AgentCoreStackProps extends BaseStackProps {
+export interface AgentCoreStackProps extends CoreDeployProps {
     imageUri: string
 }
 
@@ -19,6 +20,7 @@ export class AgentCoreStack extends cdk.Stack {
     readonly agentCoreGateway: bedrockagentcore.CfnGateway;
     readonly agentCoreMemory: bedrockagentcore.CfnMemory;
     readonly mcpLambda: lambda.Function;
+
 
     constructor(scope: Construct, id: string, props: AgentCoreStackProps) {
         super(scope, id, props);
@@ -29,6 +31,7 @@ export class AgentCoreStack extends cdk.Stack {
         /*****************************
         * AgentCore Gateway
         ******************************/
+
 
         this.mcpLambda = new lambda.Function(this, `${props.appName}-McpLambda`, {
             runtime: lambda.Runtime.PYTHON_3_12,

@@ -18,6 +18,9 @@ REGION = os.getenv("AWS_REGION")
 app = BedrockAgentCoreApp()
 log = app.logger
 
+session_manager: AgentCoreMemorySessionManager | None = None
+code_interp: AgentCoreCodeInterpreter | None = None
+
 if os.getenv("LOCAL_DEV_FLAG") == "1":
     # In local dev, instantiate dummy MCP client so the code runs without deploying
     from contextlib import nullcontext
@@ -38,7 +41,6 @@ async def invoke(payload, context):
     user_id = payload.get("user_id") or 'default-user'
 
     # Configure memory if available
-    session_manager = None
     if MEMORY_ID:
         session_manager = AgentCoreMemorySessionManager(
             AgentCoreMemoryConfig(
@@ -60,7 +62,7 @@ async def invoke(payload, context):
 
 
     # Create code interpreter
-    code_interpreter = AgentCoreCodeInterpreter(
+    code_interp = AgentCoreCodeInterpreter(
         region=REGION,
         session_name=session_id,
         auto_create=True,
@@ -73,9 +75,9 @@ async def invoke(payload, context):
         # Create agent
         agent = Agent(
             model=load_model(),
-            session_manager=session_manager,
+            session_manager=session_manager, # type: ignore
             system_prompt=ORCHESTRATOR_PROMP,
-            tools=[code_interpreter.code_interpreter, flightAgent, itinerariesAgent, accomodationAgent] + tools
+            tools=[code_interp.code_interpreter, flightAgent, itinerariesAgent, accomodationAgent] + tools
         )
 
         # Execute and format response
@@ -116,51 +118,54 @@ def format_response(result) -> str:
     return "\n".join(parts)
 
 
-@tool(context="codeInterp")
-def flightAgent(codeInterp: AgentCoreCodeInterpreter, tools: List[Any], prompt: str):
+@tool()
+async def flightAgent(tools: List[Any], prompt: str):
 
     flightAgent = Agent(
         model=load_model(),
+        session_manager=session_manager,
         system_prompt=FLIGHT_AGENT_PROMPT,
-        tools=[codeInterp.code_interpreter] + tools
+        tools=[code_interp.code_interpreter] + tools # pyright: ignore[reportOptionalMemberAccess]
     )
 
-    response = flightAgent(prompt=prompt)
+    stream = flightAgent.stream_async(prompt=prompt)
 
-    log.info(response)
+    async for events in stream:
+        pass
 
-    return str(response)
+    
 
 
-@tool(context="codeInterp")
-def accomodationAgent(codeInterp: AgentCoreCodeInterpreter, tools: List[Any], prompt: str): 
+@tool()
+async def accomodationAgent(tools: List[Any], prompt: str): 
 
     accomodationAgent = Agent(
         model=load_model(),
+        session_manager=session_manager,
         system_prompt=ACCOMODATION_AGENT_PROMPT,
-        tools=[codeInterp.code_interpreter] + tools
-    )
-    response = accomodationAgent(prompt=prompt)
-
-    log.info(response)
-
-    return str(response)
-
-
-@tool(context="codeInterp")
-def itinerariesAgent(codeInterp: AgentCoreCodeInterpreter, tools: List[Any], prompt: str):
-    itinerariesAgent = Agent(
-        model=load_model(),
-        system_prompt=ITINERARIES_AGENT_PROMPT,
-        tools=[codeInterp.code_interpreter] + tools
+        tools=[code_interp.code_interpreter] + tools # pyright: ignore[reportOptionalMemberAccess]
     )
     
-    response = itinerariesAgent(prompt=prompt)
+    stream = accomodationAgent.stream_async(prompt=prompt)
 
-    log.info(response)
+    async for events in stream:
+        pass
 
-    return str(response)
 
+@tool()
+async def itinerariesAgent(tools: List[Any], prompt: str):
+
+    itinerariesAgent = Agent(
+        model=load_model(),
+        session_manager=session_manager,
+        system_prompt=ITINERARIES_AGENT_PROMPT,
+        tools=[code_interp.code_interpreter] + tools # pyright: ignore[reportOptionalMemberAccess]
+    )
+    
+    stream = itinerariesAgent.stream_async(prompt=prompt)
+
+    async for events in stream:
+        pass
 
 
 

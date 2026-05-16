@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib/core'
 
-export interface BaseStackProps extends cdk.StackProps {
+//interface contract for core deployment cdk properties
+export interface CoreDeployProps extends cdk.StackProps {
     appName: string
 }

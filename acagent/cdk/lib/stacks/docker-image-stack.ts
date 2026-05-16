@@ -1,10 +1,10 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs/lib/construct';
 import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets'
-import { BaseStackProps } from '../types';
+import { CoreDeployProps } from '../types';
 import * as path from 'path';
 
-export interface DockerImageStackProps extends BaseStackProps {}
+export interface DockerImageStackProps extends CoreDeployProps {}
 
 export class DockerImageStack extends cdk.Stack {
     readonly imageUri: string
