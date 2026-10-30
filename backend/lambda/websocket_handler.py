@@ -45,9 +45,9 @@ def on_connect(event, connection_id):
     if session_id and len(session_id) >= MIN_SESSION_ID_LENGTH:
         table().update_item(
             Key={"session_id": session_id},
-            UpdateExpression="SET connection_id = :c, #ttl = :t",
+            UpdateExpression="SET connection_id = :connection_id, #ttl = :expiry",
             ExpressionAttributeNames={"#ttl": "ttl"},
-            ExpressionAttributeValues={":c": connection_id, ":t": expiry()},
+            ExpressionAttributeValues={":connection_id": connection_id, ":expiry": expiry()},
         )
 
     return {"statusCode": 200}
@@ -77,11 +77,11 @@ def on_chat(event, connection_id):
     # the title only gets set once, from the first prompt.
     table().update_item(
         Key={"session_id": session_id},
-        UpdateExpression="SET connection_id = :c, #ttl = :t, session_title = if_not_exists(session_title, :title)",
+        UpdateExpression="SET connection_id = :connection_id, #ttl = :expiry, session_title = if_not_exists(session_title, :title)",
         ExpressionAttributeNames={"#ttl": "ttl"},
         ExpressionAttributeValues={
-            ":c": connection_id,
-            ":t": expiry(),
+            ":connection_id": connection_id,
+            ":expiry": expiry(),
             ":title": prompt[:TITLE_MAX_LENGTH] or "New trip",
         },
     )

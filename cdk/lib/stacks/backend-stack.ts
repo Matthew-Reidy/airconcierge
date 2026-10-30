@@ -67,8 +67,8 @@ export class BackendStack extends cdk.Stack {
       actions: ['bedrock-agentcore:ListEvents'],
       resources: [props.memoryArn],
     }));
-    for (const fn of [this.websocketFunction, this.httpFunction]) {
-      fn.addEnvironment('SESSION_TABLE_NAME', this.sessionTable.tableName);
+    for (const lambdaFunction of [this.websocketFunction, this.httpFunction]) {
+      lambdaFunction.addEnvironment('SESSION_TABLE_NAME', this.sessionTable.tableName);
     }
 
     /*****************************

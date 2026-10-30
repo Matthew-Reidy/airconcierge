@@ -14,7 +14,7 @@ async def invoke(payload, context):
     prompt = payload.get("prompt", "")
     session_id = getattr(context, "session_id", None) or "default"
 
-    async for chunk, _meta in agent.astream(
+    async for chunk, _chunk_metadata in agent.astream(
         {"messages": [{"role": "user", "content": prompt}]},
         config={"configurable": {"thread_id": session_id}},
         stream_mode="messages",

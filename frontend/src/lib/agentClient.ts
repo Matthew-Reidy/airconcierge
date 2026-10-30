@@ -1,65 +1,67 @@
-// Transport to the agent. Uses the websocket in VITE_WS_URL when set;
-// otherwise streams a canned reply so the UI can be developed offline.
+// Transport to the agent over the WebSocket API at VITE_WS_URL (e.g. wss://<id>.execute-api.<region>.amazonaws.com/prod).
 //
-// Assumed wire format (adjust to the frontend-stack trigger lambda):
-//   send:    { session_id, prompt }
-//   receive: { type: 'chunk', data: string } ... { type: 'done' }
+// Protocol:
+//   connect: <WS_URL>?sessionid=<id>   (omit sessionid to start a new session)
+//   send:    { action: 'chat', prompt }
+//   receive: { type: 'session', session_id }   once, when the backend creates a new session
+//            { type: 'chunk', data }           streamed reply text
+//            { type: 'done' }
+//            { type: 'error', data }
 
 const WS_URL = import.meta.env.VITE_WS_URL as string | undefined
 
 export interface StreamHandlers {
+  onSession: (sessionId: string) => void
   onChunk: (text: string) => void
   onDone: () => void
   onError: (message: string) => void
 }
 
-export function streamReply(sessionId: string, prompt: string, h: StreamHandlers): () => void {
-  return WS_URL ? viaWebSocket(WS_URL, sessionId, prompt, h) : viaMock(prompt, h)
+export function streamReply(sessionId: string | undefined, prompt: string, handlers: StreamHandlers): () => void {
+  if (!WS_URL) {
+    handlers.onError('VITE_WS_URL is not set.')
+    return () => {}
+  }
+  return viaWebSocket(WS_URL, sessionId, prompt, handlers)
 }
 
-function viaWebSocket(url: string, sessionId: string, prompt: string, h: StreamHandlers) {
-  const ws = new WebSocket(url)
+function viaWebSocket(baseUrl: string, sessionId: string | undefined, prompt: string, handlers: StreamHandlers) {
+  const url = sessionId ? `${baseUrl}?sessionid=${encodeURIComponent(sessionId)}` : baseUrl
+  const webSocket = new WebSocket(url)
   let finished = false
   const finish = () => {
     if (!finished) {
       finished = true
-      h.onDone()
+      handlers.onDone()
     }
   }
-  ws.onopen = () => ws.send(JSON.stringify({ session_id: sessionId, prompt }))
-  ws.onmessage = (e) => {
+
+  webSocket.onopen = () => webSocket.send(JSON.stringify({ action: 'chat', prompt }))
+  webSocket.onmessage = (messageEvent) => {
     try {
-      const msg = JSON.parse(e.data)
-      if (msg.type === 'chunk') h.onChunk(msg.data)
-      else if (msg.type === 'done') {
+      const serverMessage = JSON.parse(messageEvent.data)
+      if (serverMessage.type === 'session') handlers.onSession(serverMessage.session_id)
+      else if (serverMessage.type === 'chunk') handlers.onChunk(serverMessage.data)
+      else if (serverMessage.type === 'error') {
+        finished = true
+        handlers.onError(serverMessage.data)
+        webSocket.close()
+      } else if (serverMessage.type === 'done') {
         finish()
-        ws.close()
+        webSocket.close()
       }
     } catch {
-      h.onChunk(String(e.data))
+      handlers.onChunk(String(messageEvent.data))
     }
   }
-  ws.onerror = () => {
+  webSocket.onerror = () => {
+    if (finished) return
     finished = true
-    h.onError('Connection error. Please try again.')
+    handlers.onError('Connection error. Please try again.')
   }
-  ws.onclose = finish
+  webSocket.onclose = finish
   return () => {
     finished = true
-    ws.close()
+    webSocket.close()
   }
-}
-
-function viaMock(prompt: string, h: StreamHandlers) {
-  const words = `(Mock reply, set VITE_WS_URL to talk to the real agent.) You asked: "${prompt}". Tell me your dates, budget and departure city and I'll start planning flights, stays and an itinerary.`.split(' ')
-  let i = 0
-  const timer = setInterval(() => {
-    if (i >= words.length) {
-      clearInterval(timer)
-      h.onDone()
-      return
-    }
-    h.onChunk((i === 0 ? '' : ' ') + words[i++])
-  }, 40)
-  return () => clearInterval(timer)
 }

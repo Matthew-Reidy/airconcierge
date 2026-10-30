@@ -2,119 +2,148 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Chat from './Chat'
 import Chatsidebar from './Chatsidebar'
 import { streamReply } from '../lib/agentClient'
-import type { Session } from '../types'
+import { fetchChatHistory, fetchSessions } from '../lib/api'
+import type { Message, Session } from '../types'
 
-const STORAGE_KEY = 'airconcierge.sessions'
-const uid = () => crypto.randomUUID()
+const generateId = () => crypto.randomUUID()
 
-const newSession = (): Session => ({ id: uid(), title: 'New trip', updatedAt: Date.now(), messages: [] })
-
-function load(): Session[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as Session[]
-    // drop streaming placeholders left over from an interrupted reply
-    return raw.map((s) => ({ ...s, messages: s.messages.map((m) => ({ ...m, pending: false })) }))
-  } catch {
-    return []
-  }
-}
+const newSession = (): Session => ({ id: generateId(), title: 'New trip', updatedAt: Date.now(), messages: [] })
 
 const Chatwrapper = () => {
-  const [sessions, setSessions] = useState<Session[]>(() => {
-    const saved = load()
-    return saved.length ? saved : [newSession()]
-  })
+  const [sessions, setSessions] = useState<Session[]>(() => [newSession()])
   const [activeId, setActiveId] = useState(() => sessions[0].id)
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const cancel = useRef<(() => void) | null>(null)
+  const [busySessionId, setBusySessionId] = useState<string | null>(null)
+  const cancelStream = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
-    } catch { /* storage unavailable */ }
-  }, [sessions])
+    fetchSessions()
+      .then((sessionSummaries) =>
+        setSessions((currentSessions) => {
+          const knownRemoteIds = new Set(currentSessions.map((session) => session.remoteId))
+          const fetchedSessions: Session[] = sessionSummaries
+            .filter((summary) => !knownRemoteIds.has(summary.session_id))
+            .map((summary) => ({
+              id: summary.session_id,
+              remoteId: summary.session_id,
+              title: summary['session name'] || 'Untitled trip',
+              updatedAt: 0,
+              messages: [],
+              loaded: false,
+            }))
+          return [...currentSessions, ...fetchedSessions]
+        }),
+      )
+      .catch((error) => console.error('Could not load sessions', error))
+  }, [])
 
-  useEffect(() => () => cancel.current?.(), [])
+  useEffect(() => () => cancelStream.current?.(), [])
 
-  const patch = useCallback((id: string, fn: (s: Session) => Session) => {
-    setSessions((all) => all.map((s) => (s.id === id ? fn(s) : s)))
+  const updateSession = useCallback((sessionId: string, update: (session: Session) => Session) => {
+    setSessions((currentSessions) =>
+      currentSessions.map((session) => (session.id === sessionId ? update(session) : session)),
+    )
   }, [])
 
   const send = (text: string) => {
-    const id = activeId
-    const replyId = uid()
-    patch(id, (s) => ({
-      ...s,
-      title: s.messages.length === 0 ? text.slice(0, 40) : s.title,
+    const sessionId = activeId
+    const remoteId = sessions.find((session) => session.id === sessionId)?.remoteId
+    const replyId = generateId()
+    updateSession(sessionId, (session) => ({
+      ...session,
+      title: session.messages.length === 0 ? text.slice(0, 40) : session.title,
       updatedAt: Date.now(),
       messages: [
-        ...s.messages,
-        { id: uid(), role: 'user', content: text },
+        ...session.messages,
+        { id: generateId(), role: 'user', content: text },
         { id: replyId, role: 'assistant', content: '', pending: true },
       ],
     }))
-    setBusyId(id)
+    setBusySessionId(sessionId)
 
-    const update = (fn: (c: string) => string, done = false) =>
-      patch(id, (s) => ({
-        ...s,
+    const updateReply = (updateContent: (content: string) => string, done = false) =>
+      updateSession(sessionId, (session) => ({
+        ...session,
         updatedAt: Date.now(),
-        messages: s.messages.map((m) =>
-          m.id === replyId ? { ...m, content: fn(m.content), pending: !done } : m,
+        messages: session.messages.map((message) =>
+          message.id === replyId
+            ? { ...message, content: updateContent(message.content), pending: !done }
+            : message,
         ),
       }))
 
-    cancel.current = streamReply(id, text, {
-      onChunk: (c) => update((prev) => prev + c),
+    cancelStream.current = streamReply(remoteId, text, {
+      onSession: (newRemoteId) =>
+        updateSession(sessionId, (session) => ({ ...session, remoteId: newRemoteId, loaded: true })),
+      onChunk: (chunk) => updateReply((content) => content + chunk),
       onDone: () => {
-        update((prev) => prev, true)
-        setBusyId(null)
+        updateReply((content) => content, true)
+        setBusySessionId(null)
       },
-      onError: (msg) => {
-        update(() => msg, true)
-        setBusyId(null)
+      onError: (errorMessage) => {
+        updateReply(() => errorMessage, true)
+        setBusySessionId(null)
       },
     })
   }
 
-  const select = (id: string) => setActiveId(id)
+  const select = (sessionId: string) => {
+    setActiveId(sessionId)
+    const selectedSession = sessions.find((session) => session.id === sessionId)
+    if (!selectedSession?.remoteId || selectedSession.loaded !== false) return
+
+    fetchChatHistory(selectedSession.remoteId)
+      .then((history) => {
+        const messages: Message[] = history.map((historyMessage) => ({
+          id: generateId(),
+          role: historyMessage.role,
+          content: historyMessage.content,
+        }))
+        updateSession(sessionId, (session) => ({ ...session, loaded: true, messages }))
+      })
+      .catch((error) => console.error('Could not load chat history', error))
+  }
 
   const create = () => {
-    const empty = sessions.find((s) => s.messages.length === 0)
-    if (empty) return setActiveId(empty.id)
-    const s = newSession()
-    setSessions((all) => [s, ...all])
-    setActiveId(s.id)
+    const emptySession = sessions.find((session) => session.messages.length === 0)
+    if (emptySession) return setActiveId(emptySession.id)
+    const session = newSession()
+    setSessions((currentSessions) => [session, ...currentSessions])
+    setActiveId(session.id)
   }
 
-  const remove = (id: string) => {
-    if (busyId === id) {
-      cancel.current?.()
-      setBusyId(null)
+  const remove = (sessionId: string) => {
+    if (busySessionId === sessionId) {
+      cancelStream.current?.()
+      setBusySessionId(null)
     }
-    const rest = sessions.filter((s) => s.id !== id)
-    if (rest.length === 0) {
-      const s = newSession()
-      setSessions([s])
-      setActiveId(s.id)
+    const remainingSessions = sessions.filter((session) => session.id !== sessionId)
+    if (remainingSessions.length === 0) {
+      const session = newSession()
+      setSessions([session])
+      setActiveId(session.id)
       return
     }
-    setSessions(rest)
-    if (id === activeId) setActiveId(rest[0].id)
+    setSessions(remainingSessions)
+    if (sessionId === activeId) setActiveId(remainingSessions[0].id)
   }
 
-  const active = sessions.find((s) => s.id === activeId) ?? sessions[0]
+  const activeSession = sessions.find((session) => session.id === activeId) ?? sessions[0]
 
   return (
     <div className="app-shell">
       <Chatsidebar
         sessions={sessions}
-        activeId={active.id}
+        activeId={activeSession.id}
         onSelect={select}
         onNew={create}
         onDelete={remove}
       />
-      <Chat key={active.id} session={active} busy={busyId === active.id} onSend={send} />
+      <Chat
+        key={activeSession.id}
+        session={activeSession}
+        busy={busySessionId === activeSession.id}
+        onSend={send}
+      />
     </div>
   )
 }

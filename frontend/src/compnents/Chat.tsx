@@ -32,10 +32,10 @@ const Chat = ({ session, busy, onSend }: Props) => {
             <p>Describe your trip and I'll help with flights, stays and an itinerary.</p>
           </div>
         )}
-        {session.messages.map((m) => (
-          <div key={m.id} className={`msg ${m.role}`}>
+        {session.messages.map((message) => (
+          <div key={message.id} className={`msg ${message.role}`}>
             <div className="bubble">
-              {m.content || (m.pending ? <span className="typing">…</span> : '')}
+              {message.content || (message.pending ? <span className="typing">…</span> : '')}
             </div>
           </div>
         ))}
@@ -43,8 +43,8 @@ const Chat = ({ session, busy, onSend }: Props) => {
       </div>
       <form
         className="composer"
-        onSubmit={(e) => {
-          e.preventDefault()
+        onSubmit={(event) => {
+          event.preventDefault()
           submit()
         }}
       >
@@ -52,10 +52,10 @@ const Chat = ({ session, busy, onSend }: Props) => {
           value={draft}
           rows={1}
           placeholder="Message Air Concierge…"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault()
               submit()
             }
           }}
